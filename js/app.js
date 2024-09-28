@@ -1,36 +1,45 @@
 function iniciarApp() {
 
-    const selectCategorias = document.querySelector('#categorias');
-    selectCategorias.addEventListener('change', selectCategoria);
 
     const resultado = document.querySelector('#resultado');
+
+    const selectCategorias = document.querySelector('#categorias');
+    if(selectCategorias) {
+        selectCategorias.addEventListener('change', seleccionarCategoria)
+        obtenerCategorias();
+    }
+    const favoritosDiv = document.querySelector('.favoritos');
+    if(favoritosDiv) {
+        obtenerFavoritos();
+    }
+
     const modal = new bootstrap.Modal('#modal', {});
 
-    obtenerCategorias();
+    
 
     function obtenerCategorias() {
         const url = 'https://www.themealdb.com/api/json/v1/1/categories.php';
         fetch(url)
             .then(respuesta => respuesta.json())
-            .then(resultado => mostrarCategorias(resultado.categories))
+            .then( resultado => msotrarCategorias(resultado.categories))
     }
 
-    function mostrarCategorias(categorias = []) {
+    function msotrarCategorias(categorias = []) {
         categorias.forEach( categoria => {
-            const { strCategory } = categoria;
+            const { strCategory } = categoria;
             const option = document.createElement('OPTION');
             option.value = strCategory;
             option.textContent = strCategory;
-            selectCategorias.appendChild(option);
+            selectCategorias.appendChild(option);     
         })
     }
 
-    function selectCategoria(e) {
+    function seleccionarCategoria(e) {
         const categoria = e.target.value;
         const url = `https://www.themealdb.com/api/json/v1/1/filter.php?c=${categoria}`;
         fetch(url)
             .then(respuesta => respuesta.json())
-            .then( resultado => mostrarRecetas(resultado.meals));
+            .then(resultado => mostrarRecetas(resultado.meals))
     }
 
     function mostrarRecetas(recetas = []) {
@@ -39,30 +48,30 @@ function iniciarApp() {
 
         const heading = document.createElement('H2');
         heading.classList.add('text-center', 'text-black', 'my-5');
-        heading.textContent = recetas.length ? 'Resultados': 'No hay resultados';
+        heading.textContent = recetas.length ? 'Resultados': 'No Hay Resultados';
         resultado.appendChild(heading);
-       
-        // iterar en los resultados
+        
+        // Iterar en los resultados
         recetas.forEach(receta => {
-            const { idMeal, strMeal, strMealThumb } = receta;
+            const { idMeal, strMeal, strMealThumb } = receta;
 
             const recetaContenedor = document.createElement('DIV');
             recetaContenedor.classList.add('col-md-4');
 
             const recetaCard = document.createElement('DIV');
-            recetaCard.classList.add('card', 'mb-4')
+            recetaCard.classList.add('card', 'mb-4');
 
             const recetaImagen = document.createElement('IMG');
             recetaImagen.classList.add('card-img-top');
-            recetaImagen.alt = `Imagen de la receta ${strMeal}`;
-            recetaImagen.src = strMealThumb;
+            recetaImagen.alt = `Imagen de la receta ${strMeal ?? receta.titulo}`;
+            recetaImagen.src = strMealThumb ?? receta.img;
 
             const recetaCardBody = document.createElement('DIV');
             recetaCardBody.classList.add('card-body');
 
             const recetaHeading = document.createElement('H3');
             recetaHeading.classList.add('card-title', 'mb-3');
-            recetaHeading.textContent = strMeal;
+            recetaHeading.textContent = strMeal ?? receta.titulo;
 
             const recetaButton = document.createElement('BUTTON');
             recetaButton.classList.add('btn', 'btn-danger', 'w-100');
@@ -72,6 +81,7 @@ function iniciarApp() {
             recetaButton.onclick = function() {
                 seleccionarReceta(idMeal ?? receta.id);
             }
+
 
             // Inyectar en el código HTML
             recetaCardBody.appendChild(recetaHeading);
@@ -84,14 +94,14 @@ function iniciarApp() {
 
             resultado.appendChild(recetaContenedor);
         })
+
     }
 
     function seleccionarReceta(id) {
-        const url = `https://themealdb.com/api/json/v1/1/lookup.php?i=${id}`;
+        const url = `https://www.themealdb.com/api/json/v1/1/lookup.php?i=${id}`;
         fetch(url)
             .then(respuesta => respuesta.json())
             .then(resultado => mostrarRecetaModal(resultado.meals[0]))
-
     }
 
     function mostrarRecetaModal(receta) {
@@ -135,19 +145,19 @@ function iniciarApp() {
         btnFavorito.classList.add('btn', 'btn-danger', 'col');
         btnFavorito.textContent = existeStorage(idMeal) ? 'Eliminar Favorito' : 'Guardar Favorito';
 
-        // localStorage
+        // localstorage
         btnFavorito.onclick = function() {
             if(existeStorage(idMeal)) {
                 eliminarFavorito(idMeal);
                 btnFavorito.textContent = 'Guardar Favorito';
                 mostrarToast('Eliminado Correctamente');
-                return;
+                return
             }
 
             agregarFavorito({
                 id: idMeal,
                 titulo: strMeal,
-                img: strMealThumb
+                img: strMealThumb 
             });
             btnFavorito.textContent = 'Eliminar Favorito';
             mostrarToast('Agregado Correctamente');
@@ -165,38 +175,50 @@ function iniciarApp() {
 
         // Muestra el modal
         modal.show();
-
     }
 
     function agregarFavorito(receta) {
         const favoritos = JSON.parse(localStorage.getItem('favoritos')) ?? [];
-        localStorage.setItem('favoritos', JSON.stringify([...favoritos, receta]))
-          }
+        localStorage.setItem('favoritos', JSON.stringify([...favoritos, receta]));
+    }
 
-          function eliminarFavorito(id) {
-            const favoritos = JSON.parse(localStorage.getItem('favoritos')) ?? [];
-            const nuevosFavoritos = favoritos.filter(favorito => favorito.id !== id);
-            localStorage.setItem('favoritos', JSON.stringify(nuevosFavoritos));
+    function eliminarFavorito(id) {
+        const favoritos = JSON.parse(localStorage.getItem('favoritos')) ?? [];
+        const nuevosFavoritos = favoritos.filter(favorito => favorito.id !== id);
+        localStorage.setItem('favoritos', JSON.stringify(nuevosFavoritos));
+    }
+
+    function existeStorage(id) {
+        const favoritos = JSON.parse(localStorage.getItem('favoritos')) ?? [];
+        return favoritos.some(favorito => favorito.id === id);
+    }
+
+    function mostrarToast(mensaje) {
+        const toastDiv = document.querySelector('#toast');
+        const toastBody = document.querySelector('.toast-body');
+        const toast = new bootstrap.Toast(toastDiv);
+        toastBody.textContent = mensaje;
+        toast.show();
+    }
+
+    function obtenerFavoritos() {
+        const favoritos = JSON.parse(localStorage.getItem('favoritos')) ?? [];
+        if(favoritos.length) {
+            mostrarRecetas(favoritos);
+            return
+        } 
+
+        const noFavoritos = document.createElement('P');
+        noFavoritos.textContent = 'No hay favoritos aún';
+        noFavoritos.classList.add('fs-4', 'text-center', 'font-bold', 'mt-5');
+        favoritosDiv.appendChild(noFavoritos);
+    }
+
+    function limpiarHtml(selector) {
+        while(selector.firstChild) {
+            selector.removeChild(selector.firstChild);
         }
-
-          function existeStorage(id) {
-            const favoritos = JSON.parse(localStorage.getItem('favoritos')) ?? [];
-            return favoritos.some(favorito => favorito.id === id);
-        }
-
-        function mostrarToast(mensaje) {
-            const toastDiv = document.querySelector('#toast');
-            const toastBody = document.querySelector('.toast-body');
-            const toast = new bootstrap.Toast(toastDiv);
-            toastBody.textContent = mensaje;
-            toast.show();
-        }
-
-        function limpiarHtml(selector) {
-            while(selector.firstChild) {
-                selector.removeChild(selector.firstChild);
-            }
     }
 }
 
-document.addEventListener('DOMContentLoaded', iniciarApp)
+document.addEventListener('DOMContentLoaded', iniciarApp);
